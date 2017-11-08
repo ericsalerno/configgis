@@ -23,9 +23,20 @@ func ValidResponse(key string, value string) Response {
 func ErrorResponse(err error) Response {
 	r := Response{}
 	r.Status = 500
-	r.Message = err.Error()
 	r.Key = ""
 	r.Value = ""
+	r.Message = err.Error()
+
+	return r
+}
+
+//  FailResponse creates a failed usage response object
+func FailResponse() Response {
+	r := Response{}
+	r.Status = 400
+	r.Key = ""
+	r.Value = ""
+	r.Message = "Invalid operation. Use GET /get/<server>/<stage>/<key> or POST /set/<server>/<stage>/<key>"
 
 	return r
 }

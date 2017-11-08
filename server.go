@@ -32,8 +32,8 @@ func NewServer(port int, redisHost string, redisPort int) *Server {
 		DB:       0,
 	})
 
-	s.getMatch = regexp.MustCompile("/get/(.*)")
-	s.setMatch = regexp.MustCompile("/set/(.*)")
+	s.getMatch = regexp.MustCompile("/get/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/?")
+	s.setMatch = regexp.MustCompile("/set/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/?")
 
 	return &s
 }
@@ -51,25 +51,36 @@ func (s *Server) Listen() {
 
 // ServeHTTP server HTTP
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.setMatch.MatchString(r.URL.Path) {
-		s.setValue(w, r)
-	} else if s.getMatch.MatchString(r.URL.Path) {
-		s.getValue(w, r)
-	} else {
-		http.NotFound(w, r)
+
+	getMatches := s.getMatch.FindSubmatch([]byte(r.URL.Path))
+
+	if len(getMatches) == 4 {
+		s.getValue(w, string(getMatches[1]), string(getMatches[2]), string(getMatches[3]))
+		return
 	}
+
+	setMatches := s.setMatch.FindSubmatch([]byte(r.URL.Path))
+
+	if len(setMatches) == 4 {
+		s.setValue(w, string(setMatches[1]), string(setMatches[2]), string(setMatches[3]))
+		return
+	}
+
+	err := FailResponse()
+	s.processResponse(err, w)
 }
 
-func (s *Server) setValue(w http.ResponseWriter, r *http.Request) {
+// setValue expects a url in the format of // /set/server/stage/key
+func (s *Server) setValue(w http.ResponseWriter, server string, stage string, key string) {
 
-	response := ValidResponse("set", r.URL.Path)
+	response := ValidResponse(key, "set some value")
 
 	s.processResponse(response, w)
 }
 
-func (s *Server) getValue(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getValue(w http.ResponseWriter, server string, stage string, key string) {
 
-	response := ValidResponse("get", r.URL.Path)
+	response := ValidResponse(key, "got some value")
 
 	s.processResponse(response, w)
 }
@@ -83,5 +94,6 @@ func (s *Server) processResponse(r Response, w http.ResponseWriter) {
 		return
 	}
 
+	w.WriteHeader(r.Status)
 	w.Write(output)
 }
