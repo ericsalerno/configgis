@@ -1,4 +1,4 @@
-package configgis
+package main
 
 import (
 	"encoding/json"
@@ -23,8 +23,7 @@ type Server struct {
 func NewServer(port int, redisHost string, redisPort int) *Server {
 	s := Server{}
 	s.port = port
-	//s.redisHost = redisHost
-	//s.redisPort = redisPort
+
 	connection := fmt.Sprintf("%s:%d", redisHost, redisPort)
 	s.redisDB = redis.NewClient(&redis.Options{
 		Addr:     connection,

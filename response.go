@@ -1,4 +1,4 @@
-package configgis
+package main
 
 // Response envelope
 type Response struct {
