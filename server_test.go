@@ -1,6 +1,12 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
 
 func TestNewServer(t *testing.T) {
 	s := NewServer(337, "something", 123)
@@ -23,7 +29,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestRoutingMatches(t *testing.T) {
-	s := NewServer(337, "something", 123)
+	s := NewServer(337, "localhost", 6379)
 
 	if s.getMatch.MatchString("/get/site.com/live/value") != true {
 		t.Fatal("invalid get match regex!")
@@ -31,5 +37,51 @@ func TestRoutingMatches(t *testing.T) {
 
 	if s.setMatch.MatchString("/set/site.com/live/value") != true {
 		t.Fatal("Invalid set match regex!")
+	}
+}
+
+func TestSetValue(t *testing.T) {
+	s := NewServer(123, "localhost", 6379)
+
+	w := httptest.NewRecorder()
+
+	s.setValue(w, "something", "live", "key")
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		t.Fatal("Invalid status code received!")
+	}
+
+	bodyStr := string(body)
+
+	fmt.Println(bodyStr)
+	if strings.Contains(bodyStr, `"key":"key"`) == false {
+		t.Fatal("Did not find key field!")
+	}
+}
+
+func TestServeHTTP(t *testing.T) {
+	s := NewServer(123, "localhost", 6379)
+
+	w := httptest.NewRecorder()
+
+	r := httptest.NewRequest("GET", "/set/seomthing/something/something", nil)
+
+	s.ServeHTTP(w, r)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		t.Fatal("Invalid status code received!")
+	}
+
+	bodyStr := string(body)
+
+	fmt.Println(bodyStr)
+	if strings.Contains(bodyStr, `"key":"key"`) == false {
+		t.Fatal("Did not find key field!")
 	}
 }

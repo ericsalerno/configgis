@@ -89,7 +89,7 @@ func (s *Server) processResponse(r Response, w http.ResponseWriter) {
 
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte("{\"status\":500,\"message\":\"Unable to process response.\"}"))
+		w.Write([]byte(`{"status":500,"message":"Unable to process response."}`))
 		return
 	}
 
