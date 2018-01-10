@@ -19,9 +19,9 @@ This will be replaced with a docker container and vars at some point. For now, e
 
 ### Set Value
 
-POST a value to the endpoint:
+POST key=value variables to the endpoint:
 
-    /set/<sitename>/<stage>/<key>
+    /set/<sitename>/<stage>
 
 ### Get Value
 

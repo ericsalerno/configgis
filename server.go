@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 
 	"github.com/go-redis/redis"
@@ -32,7 +34,7 @@ func NewServer(port int, redisHost string, redisPort int) *Server {
 	})
 
 	s.getMatch = regexp.MustCompile("/get/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/?")
-	s.setMatch = regexp.MustCompile("/set/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/?")
+	s.setMatch = regexp.MustCompile("/set/([a-zA-Z0-9\\._-]+)/([a-zA-Z0-9\\._-]+)/?")
 
 	return &s
 }
@@ -60,9 +62,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	setMatches := s.setMatch.FindSubmatch([]byte(r.URL.Path))
 
-	if len(setMatches) == 4 {
-		s.setValue(w, string(setMatches[1]), string(setMatches[2]), string(setMatches[3]))
-		return
+	if len(setMatches) == 3 {
+		r.ParseForm()
+		if r.Method == "POST" {
+			s.setValue(w, string(setMatches[1]), string(setMatches[2]), r.Form)
+			return
+		}
 	}
 
 	err := FailResponse()
@@ -70,10 +75,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // setValue expects a url in the format of // /set/server/stage/key
-func (s *Server) setValue(w http.ResponseWriter, server string, stage string, key string) {
+func (s *Server) setValue(w http.ResponseWriter, server string, stage string, formValues url.Values) {
 
-	response := ValidResponse(key, "set some value")
+	successful := true
+	count := 0
+	for key, value := range formValues {
+		val := s.redisDB.Set(key, value, 0)
+		if val.Err != nil {
+			successful = false
+			break
+		}
+		count++
+	}
 
+	if successful {
+		response := ValidResponse("Success", fmt.Sprintf("%d records updated.", count))
+		s.processResponse(response, w)
+		return
+	}
+
+	response := ErrorResponse(errors.New("An error occurred!"))
 	s.processResponse(response, w)
 }
 
